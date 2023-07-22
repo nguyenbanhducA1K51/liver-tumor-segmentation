@@ -1,0 +1,5 @@
+dataset:
+part1 : https://www.kaggle.com/datasets/andrewmvd/liver-tumor-segmentation
+part2 : https://www.kaggle.com/datasets/andrewmvd/liver-tumor-segmentation-part-2
+
+download both of them and extract to the same folder

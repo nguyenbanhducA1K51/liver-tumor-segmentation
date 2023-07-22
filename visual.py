@@ -16,6 +16,7 @@ from matplotlib.pyplot import figure
 from fastai.basics import *
 from fastai.vision.all import *
 from fastai.data.transforms import *
+#link original :
 pd.set_option('expand_frame_repr', False)
 file_list = []
 for dirname, _, filenames in os.walk('/root/data/liver_seg'):
@@ -40,7 +41,6 @@ for i in range(91):
 # drop segment rows
 df_files = df_files[df_files.mask_filename != ''].sort_values(by=['filename']).reset_index(drop=True) 
 
-# print(df_files.tail())
 print(df_files.head())
 
 def read_nii(filepath):
