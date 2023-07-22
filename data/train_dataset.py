@@ -14,88 +14,77 @@ import nibabel as nib
 import random
 from scipy import ndimage
 import SimpleITK as sitk
-from transform import Compose,RandomCrop,Center_Crop
+from transform import Compose,RandomCrop,Center_Crop,MinMaxNormalize,ToTensor,AddChannel
 pd.set_option('expand_frame_repr', False)
 
-class liverDataset(Dataset):
-    def __init__(self,transform,data_path='/root/data/liver/train'):
-        file_list = []
-        for dirname, _, filenames in os.walk(data_path):
-            for filename in filenames:
-                file_list.append((dirname, filename)) 
+class trainDataset(Dataset):
+    def __init__(self,file_path,root_path):
+    self.root_path=root_path
+       self.names= read_file (file_path)
         
-        df = pd.DataFrame(file_list, columns =['dirname', 'filename']) 
-        df.sort_values(by=['filename'], ascending=True)  
-        df["mask_dirname"]  = ""
-        df["mask_filename"] = ""
-        df.to_csv('data.csv', index=True)
-
-        for i in range (len(df)):
-            if df.loc[i,"filename"] .startswith("volume"):
-                idx=os.path.splitext(df.loc[i,"filename"])[0] .split("-")[1]
-
-                df.loc[i,"mask_filename"]=f"segmentation-{idx}.nii"
-                df.loc[i,"mask_dirname"]=os.path.join(data_path,"segmentations")
-        df= df[df.mask_filename != ''].sort_values(by=['filename']).reset_index(drop=True) 
-        self.df=df
-        self.transform=transform
-
-    
+     
     def __len__(self):
-        return len(self.df)
-    def __getitem__(self,idx):
-        f_vol=os.path.join(df.loc[i,"dirname"],df.loc[i,"filename"])
-        f_mask=os.path.join(df.loc[i,"dirname"],df.loc[i,"filename"])
-        
-        ct = sitk.ReadImage(f_vol, sitk.sitkInt16)
-        seg = sitk.ReadImage(f_mask, sitk.sitkUInt8)
+        return len(self.names)
+    def __getitem__(self,idx):      
+        ct = sitk.ReadImage(self.names[idx][0] ,sitk.sitkInt16)
+        seg = sitk.ReadImage(self.names[idx][1], sitk.sitkUInt8)
 
         ct_array = sitk.GetArrayFromImage(ct)
 
         seg_array = sitk.GetArrayFromImage(seg)
-        # norm_factor' default=200.0)
-        ct_array = ct_array / self.args.norm_factor
         ct_array = ct_array.astype(np.float32)
 
-        ct_array = torch.FloatTensor(ct_array).unsqueeze(0)
-        seg_array = torch.FloatTensor(seg_array).unsqueeze(0)
-
-        if self.transforms:
-            ct_array,seg_array = self.transforms(ct_array, seg_array)     
-        return ct_array, seg_array.squeeze(0)
-
-def train_val_loader(args):
-    train_val_rate=args.split
-    error_msg = "[!] val_rate should be in the range [0, 1]."
-    assert ((val_rate >= 0) and (val_rate <= 1)), error_msg
-    train_transform= Compose([ 
+        transform=Compose([ 
+        ToTensor(),
+        AddChannel(),
+        MinMaxNormalize(),
         RandomCrop (slices=args.crop_size)
     ])
-    val_transform=Compose([
-        Center_Crop(max_size=args.val_crop_max_size)
-    ])
-    train_dataset=liverDataset(transform=train_transform,data_path=args.ori_train_path)
-    val_dataset=liverDataset(transform=val_transform,data_path=args.ori_train_path)
-    num_train = len(dataset)
-    indices = list(range(num_train))
-    split = int(np.floor(valid_size * num_train))
-    train_idx, valid_idx = indices[split:], indices[:split]
-    train_sampler = SubsetRandomSampler(train_idx)
-    valid_sampler = SubsetRandomSampler(valid_idx)
+            ct_tensor,seg_tensor = transforms(ct_array, seg_array)     
+        return ct_tensor, seg_tensor
+def read_file(path):
+    file_name_list = []
+    with open(file_path, 'r') as file_to_read:
+        while True:
+            lines = file_to_read.readline().strip()  
+            if not lines:
+                break
+            file_name_list.append(lines.split())
+    return file_name_list
 
-    train_loader = torch.utils.data.DataLoader(
-        train_dataset, batch_size=args.batch_size, sampler=train_sampler,
-        num_workers=args.num_workers,
-    )
-    valid_loader = torch.utils.data.DataLoader(
-        val_dataset, batch_size=1, sampler=valid_sampler,
-        num_workers=args.num_workers,
-    )
-    return train_loader,valid_loader
-    if __name__=="__main__":
-        import argparser
-        args=argparser.args
-        train_val_loader(args)
+
+# def train_val_loader(args):
+#     train_val_rate=args.split
+#     error_msg = "[!] val_rate should be in the range [0, 1]."
+#     assert ((val_rate >= 0) and (val_rate <= 1)), error_msg
+#     train_transform= Compose([ 
+#         RandomCrop (slices=args.crop_size)
+#     ])
+#     val_transform=Compose([
+#         Center_Crop(max_size=args.val_crop_max_size)
+#     ])
+#     train_dataset=liverDataset(transform=train_transform,data_path=args.ori_train_path)
+#     val_dataset=liverDataset(transform=val_transform,data_path=args.ori_train_path)
+#     num_train = len(dataset)
+#     indices = list(range(num_train))
+#     split = int(np.floor(valid_size * num_train))
+#     train_idx, valid_idx = indices[split:], indices[:split]
+#     train_sampler = SubsetRandomSampler(train_idx)
+#     valid_sampler = SubsetRandomSampler(valid_idx)
+
+#     train_loader = torch.utils.data.DataLoader(
+#         train_dataset, batch_size=args.batch_size, sampler=train_sampler,
+#         num_workers=args.num_workers,
+#     )
+#     valid_loader = torch.utils.data.DataLoader(
+#         val_dataset, batch_size=1, sampler=valid_sampler,
+#         num_workers=args.num_workers,
+#     )
+#     return train_loader,valid_loader
+#     if __name__=="__main__":
+#         import argparser
+#         args=argparser.args
+#         train_val_loader(args)
 
    
 

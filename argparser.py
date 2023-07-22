@@ -22,7 +22,7 @@ parser.add_argument('--valid_rate', type=float, default=0.2, help='')
 # data in/out and dataset
 # _dataset-path seem to be tge fixed part
 parser.add_argument('--ori_train_path',default = '/root/data/liver/train',help='original trainset root path')
-parser.add_argument('--ori_train_path',default = '/root/data/liver/fix_train',help='fix trainset root path')
+parser.add_argument('--fix_train_path',default = '/root/data/liver/fix_train',help='fix trainset root path')
 parser.add_argument('--ori_test_path',default = '/root/data/liver/train',help='ori testset root path')
 parser.add_argument('--test_data_path',default = '/ssd/lzq/dataset/LiTS/test',help='Testset path')
 parser.add_argument('--save',default='ResUNet',help='save path of trained model')
