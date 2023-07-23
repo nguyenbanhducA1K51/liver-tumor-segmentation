@@ -18,21 +18,18 @@ class Resize:
         return img[0], mask[0]
 class ToTensor:
     def __init__(self):
-        self.to_tensor = transforms.ToTensor()
-
+        return 
     def __call__(self, img, mask):
-        img = self.to_tensor(img)
-        mask=self.to_tensor(mask)
+
+        img=torch.tensor(img)
+        mask=torch.tensor(mask)
         return img,mask
-        # mask = torch.from_numpy(np.array(mask))
-        # # mask [None] add addtitonal dimension to mask
-        # return img, mask[None]
 
 class AddChannel:
     def __init__(self):
         return
     def __call__(self,img,mask):
-        return img[None],mask
+        return img[None],mask[None]
 
 
 class Normalize:
@@ -52,12 +49,14 @@ class Compose:
         for t in self.transforms:
             img, mask = t(img, mask)
         return img, mask
-class ToTensor():
+class MinMaxNormalize:
     def __init__(self):
-        return
+        return 
     def __call__(self,img,mask):
-
-
+        min_val=img.min()
+        max_val=img.max()
+        assert min_val!= max_val, "this image voxel is constant"
+        return (img-min_val)/(max_val-min_val),mask
 class RandomCrop:
     def __init__(self, slices):
         # desired crop slices
@@ -78,6 +77,7 @@ class RandomCrop:
     def __call__(self, img, mask):
 
         ss, es = self._get_range(mask.size(1), self.slices)
+        # print ("random crop", img.shape,mask.shape)
         # ss is start slice, es is end  slice
         # print(self.shape, img.shape, mask.shape)
         # actually the first dim is obtain by unsqueeze(0)
@@ -87,7 +87,7 @@ class RandomCrop:
         tmp_mask[:,:es-ss] = mask[:,ss:es]
         return tmp_img, tmp_mask
 class Center_Crop:
-    def __init__(self, base=16 max_size=96):
+    def __init__(self, base=16 ,max_size=96):
         # default: base :16, max_size:96
         # "The 'base' is set to 16 by default, because after four downsamplings, it becomes 1."
         self.base = base  

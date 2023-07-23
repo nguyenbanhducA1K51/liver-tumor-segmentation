@@ -154,9 +154,7 @@ if __name__ == '__main__':
     f= "/root/data/liver/fix_train/ct/volume-5.nii"
     ct = sitk.ReadImage(f, sitk.sitkInt16)
     arr=sitk.GetArrayFromImage(ct)
-    print (type(arr))
     # print (ct.GetSpacing())
-    print ("max",np.max(arr))
 
 
     # nii_image=nib.load("/root/repo/liver-tumor-segmentation/data/volume-0.nii")

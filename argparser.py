@@ -7,9 +7,12 @@ parser.add_argument('--n_threads', type=int, default=6,help='number of threads f
 parser.add_argument('--cuda', action='store_true',help='use cpu only')
 parser.add_argument('--gpu_id', type=list,default=[0,1], help='use cpu only')
 parser.add_argument('--seed', type=int, default=2021, help='random seed')
-parser.add_argument('--num_worker', type=int, default=3, help='num worker')
-# Preprocess parameters
-parser.add_argument('--n_labels', type=int, default=2,help='number of classes') # 分割肝脏则置为2（二类分割），分割肝脏和肿瘤则置为3（三类分割）
+parser.add_argument('--num_workers', type=int, default=3, help='num worker')
+parser.add_argument('--mini_data',type=int,default=200,help=" mini data for train and val, if value set to -1, it will load full dataset")
+# Preprocess parameter
+#f segmenting only the liver, set the label to 2 (binary segmentation). If segmenting both the liver and tumors, 
+#set the label to 3 (multiclass segmentation)
+parser.add_argument('--n_labels', type=int, default=2,help='number of classes') 
 parser.add_argument('--upper', type=int, default=200, help='')
 parser.add_argument('--lower', type=int, default=-200, help='')
 parser.add_argument('--norm_factor', type=float, default=200.0, help='')
@@ -29,7 +32,7 @@ parser.add_argument('--save',default='ResUNet',help='save path of trained model'
 parser.add_argument('--batch_size', type=list, default=2,help='batch size of trainset')
 parser.add_argument('--split',type=float,default=0.1,help="train val split")
 # train
-parser.add_argument('--epochs', type=int, default=1, metavar='N',help='number of epochs to train (default: 200)')
+parser.add_argument('--epochs', type=int, default=5, metavar='N',help='number of epochs to train (default: 200)')
 parser.add_argument('--lr', type=float, default=0.0001, metavar='LR',help='learning rate (default: 0.0001)')
 parser.add_argument('--early-stop', default=30, type=int, help='early stopping (default: 30)')
 parser.add_argument('--crop_size', type=int, default=48)

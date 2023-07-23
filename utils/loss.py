@@ -8,7 +8,9 @@ class DiceLoss(nn.Module):
         super().__init__()
 
     def forward(self, pred, target):
+        #(N,n_label,S,H,W)
         # pred = pred.squeeze(dim=1)
+        print (pred.shape,target.shape)
         smooth = 1
         dice = 0.
         for i in range(pred.size(1)):

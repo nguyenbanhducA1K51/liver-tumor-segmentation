@@ -18,3 +18,4 @@ tqdm==4.52.0
 ipywidgets==8.0.7
 monai==1.2.0
 nibabel==5.1.0
+argparse=1.4.0

@@ -1,3 +1,5 @@
+import numpy as np
+import torch
 class LossAverage(object):
     """Computes and stores the average and current value for calculate average loss"""
     def __init__(self):

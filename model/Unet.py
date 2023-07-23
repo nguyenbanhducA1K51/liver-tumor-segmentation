@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-#what is input shape to this Unet
 class UNet(nn.Module):
     def __init__(self, in_channel=1, out_channel=2, training=True):
         super(UNet, self).__init__()
@@ -23,15 +22,13 @@ class UNet(nn.Module):
             nn.Upsample(scale_factor=(1, 2, 2), mode='trilinear'),
             nn.Softmax(dim =1)
         )
-
-        # 128*128 尺度下的映射
         self.map3 = nn.Sequential(
             nn.Conv3d(64, out_channel, 1, 1),
             nn.Upsample(scale_factor=(4, 8, 8), mode='trilinear'),
             nn.Softmax(dim =1)
         )
 
-        # 64*64 尺度下的映射
+
         self.map2 = nn.Sequential(
             nn.Conv3d(128, out_channel, 1, 1),
             nn.Upsample(scale_factor=(8, 16, 16), mode='trilinear'),
@@ -48,21 +45,16 @@ class UNet(nn.Module):
 
     def forward(self, x):
         # this lack batch norm
-        # 512
         out = F.relu(F.max_pool3d(self.encoder1(x),2,2))
         t1 = out
         # print ("o1",out.shape) #2, 32, 24, 128, 128]
-        #256
         out = F.relu(F.max_pool3d(self.encoder2(out),2,2))
         t2 = out
         # print ("o2",out.shape) # [2, 64, 12, 64, 64])
-        #128
         out = F.relu(F.max_pool3d(self.encoder3(out),2,2))
         t3 = out
         # print ("o3",out.shape) #2, 128, 6, 32, 32])
-        #64
         out = F.relu(F.max_pool3d(self.encoder4(out),2,2))
-       #32
         # print ("o4",out.shape) #2, 256, 3, 16, 16])
        # t4 = out
         # out = F.relu(F.max_pool3d(self.encoder5(out),2,2))
@@ -79,19 +71,22 @@ class UNet(nn.Module):
 
         output2 = self.map2(out)
         out = F.relu(F.interpolate(self.decoder3(out),scale_factor=(2,2,2),mode ='trilinear'))
+        # 2,64,12,64,64
         out = torch.add(out,t2)
         output3 = self.map3(out)
         out = F.relu(F.interpolate(self.decoder4(out),scale_factor=(2,2,2),mode ='trilinear'))
+        # 2,32,24,128,128
         out = torch.add(out,t1)
         
         out = F.relu(F.interpolate(self.decoder5(out),scale_factor=(2,2,2),mode ='trilinear'))
-        output4 = self.map4(out)
-        # print(out.shape)
-        # print(output1.shape,output2.shape,output3.shape,output4.shape)
-        if self.training is True:
-            return output1, output2, output3, output4
-        else:
-            return output4
+        #2,2,48,256,256
+        # output4 = self.map4(out)
+        return out
+        # if self.training is True:
+        #     # return output1, output2, output3, output4
+        #     return output4
+        # else:
+        #     return output4
 if __name__=="__main__":
     net=UNet()
     x=torch.rand(2,1,48,256,256)
