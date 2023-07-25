@@ -29,7 +29,7 @@ parser.add_argument('--fix_train_path',default = '/root/data/liver/fix_train',he
 parser.add_argument('--ori_test_path',default = '/root/data/liver/train',help='ori testset root path')
 parser.add_argument('--test_data_path',default = '/ssd/lzq/dataset/LiTS/test',help='Testset path')
 parser.add_argument('--save',default='ResUNet',help='save path of trained model')
-parser.add_argument('--batch_size', type=list, default=2,help='batch size of trainset')
+parser.add_argument('--batch_size', type=list, default=1,help='batch size of trainset')
 parser.add_argument('--split',type=float,default=0.1,help="train val split")
 # train
 parser.add_argument('--epochs', type=int, default=5, metavar='N',help='number of epochs to train (default: 200)')

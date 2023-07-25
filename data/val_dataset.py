@@ -36,6 +36,7 @@ class valDataset(Dataset):
         seg_path=self.path_list[idx][1]
 
         ct=sitk.ReadImage(ct_path,sitk.sitkInt16)
+        ct = sitk.Clamp(ct, 0, 400)
         seg=sitk.ReadImage(seg_path,sitk.sitkUInt8)
         ct_array = sitk.GetArrayFromImage(ct)
 
@@ -49,7 +50,7 @@ class valDataset(Dataset):
 
         ])
         ct_tensor,seg_tensor=transforms(ct_array,seg_array)
-        return ct_tensor,seg_tensor
+        return ct_tensor,seg_tensor.squeeze(0)
 def read_file(path):
     file_name_list = []
     with open(path, 'r') as file_to_read:

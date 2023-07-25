@@ -36,7 +36,8 @@ class trainDataset(Dataset):
     def __getitem__(self,idx):      
         ct = sitk.ReadImage(self.path_list[idx][0] ,sitk.sitkInt16)
         seg = sitk.ReadImage(self.path_list[idx][1], sitk.sitkUInt8)
-        
+       
+        ct = sitk.Clamp(ct, 0, 400)
 
         ct_array = sitk.GetArrayFromImage(ct)
         
@@ -50,7 +51,7 @@ class trainDataset(Dataset):
         RandomCrop (slices=self.args.crop_size)
     ])
         ct_tensor,seg_tensor = transforms(ct_array, seg_array)     
-        return ct_tensor, seg_tensor
+        return ct_tensor, seg_tensor.squeeze(0)
 def read_file(path):
     file_name_list = []
     with open(path, 'r') as file_to_read:
@@ -61,17 +62,12 @@ def read_file(path):
             file_name_list.append(lines.split())
     return file_name_list
 
-
-
-
-if __name__=="__main__":
-   
-    
+if __name__=="__main__":    
     args=argparser.args
     dataset=trainDataset(file_path="/root/data/liver/fix_train/train_path_list.txt",mini_data=10,args=args)
-    for i in range (2):
+    for i in range (10):
         print (dataset.__getitem__(i)[0].shape,dataset.__getitem__(i)[1].shape)
-
+        print (dataset.__getitem__(i)[0].max(),dataset.__getitem__(i)[1].max(),dataset.__getitem__(i)[1].sum())
 
    
     
