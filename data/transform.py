@@ -5,7 +5,7 @@ import random
 import torch.nn.functional as F
 from torchvision import transforms
 from torchvision.transforms.functional import normalize
-
+###
 class Resize:
     def __init__(self, scale):
         # self.shape = [shape, shape, shape] if isinstance(shape, int) else shape
@@ -40,6 +40,16 @@ class Normalize:
     def __call__(self, img, mask):
         return normalize(img, self.mean, self.std, False), mask
 
+class Z_scoreNormalize:
+    def __init__(self, mean, std):
+        self.mean = mean
+        self.std = std
+
+    def __call__(self, img, mask):
+        img[img>self.mean+2*self.std] =2*self.std
+        img[img<self.mean-2*self.std]=2*self.std
+        img=(img-self.mean)/self.std
+        return img,mask
 
 class Compose:
     def __init__(self, transforms):

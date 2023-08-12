@@ -22,8 +22,8 @@ sys.path.append("/root/repo/liver-tumor-segmentation/data")
 from transform import Compose,RandomCrop,Center_Crop,MinMaxNormalize,ToTensor,AddChannel
 
 class valDataset(Dataset):
-    def __init__(self,file_path,mini_data):
-
+    def __init__(self,file_path,mini_data,args):
+        self.args=args
         self.path_list=read_file(file_path)
         assert mini_data >=-1 , "invalid mini data"
         if mini_data !=-1:
@@ -50,7 +50,7 @@ class valDataset(Dataset):
 
         ])
         ct_tensor,seg_tensor=transforms(ct_array,seg_array)
-        return ct_tensor,seg_tensor.squeeze(0)
+        return ct_tensor,seg_tensor.squeeze(0), self.path_list[idx][0]
 def read_file(path):
     file_name_list = []
     with open(path, 'r') as file_to_read:

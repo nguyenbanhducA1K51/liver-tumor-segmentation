@@ -43,7 +43,8 @@ class DiceAverage(object):
     @staticmethod
     def get_dices(logits, targets):
         dices = []
-        # print (f"logit {logits.sum()} target {targets.sum()}, prod { (logits*targets).sum()}" )
+        print (f"class bg logits {torch.sum(logits[:, 0, :, :, :])} , target{torch.sum(targets[:, 0, :, :, :])} prod { torch.sum(logits[:, 0, :, :, :] * targets[:, 0, :, :, :])}" )
+        print (f"class liver logits {torch.sum(logits[:, 1, :, :, :])} , target{torch.sum(targets[:, 1, :, :, :])} prod { torch.sum(logits[:, 1, :, :, :] * targets[:, 1, :, :, :])}" )
         for class_index in range(targets.size()[1]):
             inter = torch.sum(logits[:, class_index, :, :, :] * targets[:, class_index, :, :, :])
             union = torch.sum(logits[:, class_index, :, :, :]) + torch.sum(targets[:, class_index, :, :, :])

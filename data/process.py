@@ -14,6 +14,7 @@ class LITS_preprocess:
         self.raw_root_path = raw_dataset_path
         self.fixed_path = fixed_dataset_path
         self.classes = args.n_labels
+
         self.upper = args.upper
         self.lower = args.lower
         self.expand_slice = args.expand_slice  
@@ -27,10 +28,10 @@ class LITS_preprocess:
     # Trim the original image and save it."
     # tool.write_train_val_name_list()  
     def fix_data(self):
-        # does this fix data method and process method apply to test set
         if not os.path.exists(self.fixed_path):    
             os.makedirs(join(self.fixed_path,'ct'))
             os.makedirs(join(self.fixed_path, 'label'))
+            os.makedirs(join(self.fixed_path, 'ori_label'))
         file_list = os.listdir(join(self.raw_root_path,'ct'))
         Numbers = len(file_list)
         print('Total numbers of samples is :',Numbers)
@@ -38,15 +39,16 @@ class LITS_preprocess:
             print("==== {} | {}/{} ====".format(ct_file, i+1,Numbers))
             ct_path = os.path.join(self.raw_root_path, 'ct', ct_file)
             seg_path = os.path.join(self.raw_root_path, 'label', ct_file.replace('volume', 'segmentation'))
-            new_ct, new_seg = self.process(ct_path, seg_path, classes = self.classes)
+            new_ct, new_seg , ori_seg= self.process(ct_path, seg_path, classes = self.classes)
             # new_ct, new_seg are new sitk object
-            if new_ct != None and new_seg != None:
+            if new_ct != None and new_seg != None and ori_seg !=None:
                 sitk.WriteImage(new_ct, os.path.join(self.fixed_path, 'ct', ct_file))  
                 sitk.WriteImage(new_seg, os.path.join(self.fixed_path, 'label', ct_file.replace('volume', 'segmentation').replace('.nii', '.nii.gz')))
+                sitk.WriteImage(ori_seg, os.path.join(self.fixed_path, 'ori_label', ct_file.replace('volume', 'segmentation').replace('.nii', '.nii.gz')))
 
     def process(self, ct_path, seg_path, classes=None):
         ct = sitk.ReadImage(ct_path, sitk.sitkInt16)
-        ct_array = sitk.GetArrayFromImage(ct)
+        ct_array =sitk.GetArrayFromImage(ct) 
 
         seg = sitk.ReadImage(seg_path, sitk.sitkInt8)
         seg_array = sitk.GetArrayFromImage(seg)
@@ -56,24 +58,28 @@ class LITS_preprocess:
         if classes==2:
             # Merge the liver and liver tumor labels in the ground truth into one label."
             seg_array[seg_array > 0] = 1
-        # 将灰度值在阈值之外的截断掉
+        # HU intensity crop
         ct_array[ct_array > self.upper] = self.upper
         ct_array[ct_array < self.lower] = self.lower
 
         # order=3' specifies cubic interpolation,
         #self.slice_down_scale, 1.0
         #self.xy_down_scale, 0.5
+
         ct_array = ndimage.zoom(ct_array, (ct.GetSpacing()[-1] / self.slice_down_scale, self.xy_down_scale, self.xy_down_scale), order=3)
+        # order=3, it indicates that the interpolation method used is spline , or trilinear
         #order=0, it indicates that the interpolation method used is "nearest-neighbor" 
-        #ct_array.shape # (375, 256, 256), 375=75*5
+
+        #e.g,ct_array.shape # (375, 256, 256), 375=75*5, 
         # why scale along z axis like this
+        ori_seg_array=np.copy(seg_array)
+        print ("before",ori_seg_array.shape)
+        ori_seg_array= ndimage.zoom(ori_seg_array, (ct.GetSpacing()[-1] / self.slice_down_scale, 1, 1), order=0)
+        print ("after",ori_seg_array.shape)
         seg_array = ndimage.zoom(seg_array, (ct.GetSpacing()[-1] / self.slice_down_scale, self.xy_down_scale, self.xy_down_scale), order=0)
-        # does this zoom affect image 
-        # np.unique(seg_array)) : [0,1,2]: 0, background, 1, liver, 2: tumor 
         # Find the starting and ending slices of the liver region and expand them in both directions."
         z = np.any(seg_array, axis=(1, 2)) #axis = plane xy
-        # print ("z",z.shape) # (375,)
-        
+        # print ("z",z.shape) # (375,) 
         start_slice, end_slice = np.where(z)[0][[0, -1]]
         # numpy.where(condition, [x, y, ]/)
         #Return elements chosen from x or y depending on condition.#
@@ -100,12 +106,12 @@ class LITS_preprocess:
          #size, discard the data. As a result, there will be very few instances of data."
         # self.size is probably theminimum number of slices
         if end_slice - start_slice + 1 < self.size:
-           
-            print('Too little slice，give up the sample:', ct_file)
-            return None,None
+            return None,None,None
         ct_array = ct_array[start_slice:end_slice + 1, :, :]
         seg_array = seg_array[start_slice:end_slice + 1, :, :]
-        print("Preprocessed shape:",ct_array.shape,seg_array.shape)
+        ori_seg_array=ori_seg_array[start_slice:end_slice + 1, :, :]
+        print (seg_array.shape,ori_seg_array.shape)
+        print("Preprocessed shape:",ct_array.shape,seg_array.shape,ori_seg_array.shape)
         new_ct = sitk.GetImageFromArray(ct_array)
         new_ct.SetDirection(ct.GetDirection())
         # why origin is unchanged
@@ -115,12 +121,17 @@ class LITS_preprocess:
         #self.xy_down_scale, 0.5
         new_ct.SetSpacing((ct.GetSpacing()[0] * int(1 / self.xy_down_scale), ct.GetSpacing()[1] * int(1 / self.xy_down_scale), self.slice_down_scale))
         # 
+        ori_seg= sitk.GetImageFromArray(ori_seg_array)
+        ori_seg.SetDirection(ct.GetDirection())
+        ori_seg.SetOrigin(ct.GetOrigin())
+        ori_seg.SetSpacing((ct.GetSpacing()[0] , ct.GetSpacing()[1] , self.slice_down_scale))
+       
         new_seg = sitk.GetImageFromArray(seg_array)
         new_seg.SetDirection(ct.GetDirection())
         new_seg.SetOrigin(ct.GetOrigin())
         new_seg.SetSpacing((ct.GetSpacing()[0] * int(1 / self.xy_down_scale), ct.GetSpacing()[1] * int(1 / self.xy_down_scale), self.slice_down_scale))
-        
-        return new_ct, new_seg
+       
+        return new_ct, new_seg,ori_seg
 
     def write_train_val_name_list(self):
         data_name_list = os.listdir(join(self.fixed_path, "ct"))
@@ -139,21 +150,64 @@ class LITS_preprocess:
         for name in name_list:
             ct_path = os.path.join(self.fixed_path, 'ct', name)
             seg_path = os.path.join(self.fixed_path, 'label', name.replace('volume', 'segmentation'))
-            f.write(ct_path + ' ' + seg_path + "\n")
+            ori_seg_path=os.path.join(self.fixed_path, 'ori_label', name.replace('volume', 'segmentation'))
+            f.write(ct_path + ' ' + seg_path + ' '+ ori_seg_path +"\n")
         f.close()
+
 
 if __name__ == '__main__':
     raw_dataset_path = '/root/data/liver/train'
     fixed_dataset_path = '/root/data/liver/fix_train'
  # does nitk and nib read differently ?
+    import numpy as np
+    from scipy import ndimage
     args = argparser.args 
-    if not os.listdir(fixed_dataset_path):
-        tool = LITS_preprocess(raw_dataset_path,fixed_dataset_path, args)
-        tool.fix_data()                            
-        tool.write_train_val_name_list()  
-    f= "/root/data/liver/fix_train/ct/volume-5.nii"
-    ct = sitk.ReadImage(f, sitk.sitkInt16)
-    arr=sitk.GetArrayFromImage(ct)
+
+    # if not os.path.exists(fixed_dataset_path) or not os.listdir(fixed_dataset_path):
+    #     print ("start processing")
+    #     tool = LITS_preprocess(raw_dataset_path,fixed_dataset_path, args)
+    #     tool.fix_data()                            
+    #     tool.write_train_val_name_list()  
+   
+
+
+    path= "/root/data/liver/train/ct/volume-16.nii"
+    ct = sitk.ReadImage(path, sitk.sitkInt16)
+    ct_array =sitk.GetArrayFromImage(ct) 
+    print("Ori shape:",ct_array.shape)
+    slice_down_scale= 1.0
+    xy_down_scale=0.5
+    print (ct.GetSpacing()[-1])
+
+
+    original_spacing = ct.GetSpacing()
+    print ("ori space", original_spacing)
+    original_size = ct.GetSize()
+    print ("ori_size",original_size)
+    # out_spacing=[2.0,2.0,2.0]
+    out_spacing=[1.0,1.0,1.0]
+
+    out_size = [
+        int(np.round(original_size[0] * (original_spacing[0] / out_spacing[0]))),
+        int(np.round(original_size[1] * (original_spacing[1] / out_spacing[1]))),
+        int(np.round(original_size[2] * (original_spacing[2] / out_spacing[2])))]
+
+    resample = sitk.ResampleImageFilter()
+    resample.SetOutputSpacing(out_spacing)
+    resample.SetSize(out_size)   #Size is the shape of the array
+    resample.SetOutputDirection(ct.GetDirection())
+    resample.SetOutputOrigin(ct.GetOrigin())
+    resample.SetTransform(sitk.Transform())
+    resample.SetDefaultPixelValue(ct.GetPixelIDValue())
+    resample.SetInterpolator(sitk.sitkBSpline)
+    new_img=resample.Execute(ct)
+    new_img_arr=sitk.GetArrayFromImage(new_img)
+    print(new_img_arr.shape)
+    # new_array = ndimage.zoom(ct_array, (ct.GetSpacing()[-1] / slice_down_scale, xy_down_scale, xy_down_scale), order=3)
+    # print (new_array.shape)
+
+
+
     # print (ct.GetSpacing())
 
 

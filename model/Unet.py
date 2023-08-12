@@ -254,6 +254,6 @@ class Unet3d(nn.Module):
 if __name__=="__main__":
     net=UNet().to("cuda")
     net.apply(weight.init_model)
-    x=torch.rand(2,1,48,256,256).to("cuda")
+    x=torch.rand(2,1,48,512,512).to("cuda")
     y=net(x)
     print (y.shape)
